@@ -186,12 +186,12 @@ if __name__ == "__main__":
     with open(args.output_file, "w") as out:
         csv_writer = csv.writer(out, delimiter="\t", quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
         for k, v in res.items():
-            choices = [k] + [random.choice(x) for _, x in v.items()]
+            choices = [(k, "en")] + [(random.choice(x), lang) for lang, x in v.items()]
             if args.output_size != -1:
                 choices = random.sample(choices, k=args.output_size)
 
-            for sentence in choices:
-                csv_writer.writerow([_id, sentence])
+            for sentence, lang in choices:
+                csv_writer.writerow([_id, lang, sentence])
             _id += 1
 
     print("Done!")
