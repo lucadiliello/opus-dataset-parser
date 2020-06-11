@@ -37,6 +37,9 @@ if __name__ == "__main__":
     assert os.path.isdir(args.input_alignments_folder), f"{args.input_alignments_folder} is not a folder"
     assert not os.path.isfile(args.output_file) or args.force_overwrite, f"{args.output_file} exists but it cannot be overwritten. Use -f option"
 
+    assert args.output_size <= args.consider, f"Cannot create output sequences of sentence of length " \
+        "{args.output_size} if considering sequences of length {args.consider}"
+
     '''
     res = dict()
     errors = 0
@@ -118,7 +121,9 @@ if __name__ == "__main__":
                     assert _from.startswith("en/")
                     assert not _dest.startswith("en/")
 
+                    _from_lang = _from[:2]
                     _dest_lang = _dest[:2]
+                    assert _dest_lang != "en"
 
                     if _from.endswith(".gz"):
                         _from = _from[:-3]
@@ -142,15 +147,18 @@ if __name__ == "__main__":
                         try:
                             sentence_a = " ".join([_from[x] for x in first])
                             sentence_b = " ".join([_dest[x] for x in second])
+
+                            if sentence_a in res:
+                                if not _dest_lang in res[sentence_a]:
+                                    res[sentence_a][_dest_lang] = []
+                                res[sentence_a][_dest_lang].append(sentence_b)
+                            elif i <= (LANG_NUMBER - args.consider):
+                                res[sentence_a] = {_dest_lang: [sentence_b]}
+                            else:
+                                pass
+
                         except:
                             errors += 1
-
-                        if sentence_a in res:
-                            res[sentence_a].append(sentence_b)
-                        elif i <= (LANG_NUMBER - args.consider):
-                            res[sentence_a] = [sentence_b]
-                        else:
-                            pass
 
                     elem.clear()
 
@@ -176,9 +184,13 @@ if __name__ == "__main__":
 
     _id = 0
     with open(args.output_file, "w") as out:
-        csv_writer = csv.writer(out, delimiter="\t", quotechar='"', quoting=csv.QUOTE_MINIMAL)
+        csv_writer = csv.writer(out, delimiter="\t", quotechar='"', quoting=csv.QUOTE_NONNUMERIC)
         for k, v in res.items():
-            for sentence in [k] + v:
+            choices = [k] + [random.choice(x) for _, x in v.items()]
+            if args.output_size != -1:
+                choices = random.sample(choices, k=args.output_size)
+
+            for sentence in choices:
                 csv_writer.writerow([_id, sentence])
             _id += 1
 
