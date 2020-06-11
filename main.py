@@ -5,6 +5,7 @@ import xml.etree.ElementTree as etree
 import utils
 import random
 import tqdm
+import json
 
 LANG_NUMBER = 24
 
@@ -29,6 +30,8 @@ if __name__ == "__main__":
                         help="Consider only sentence with translation in at least X languages")
     parser.add_argument('-s', '--output_size', type=int, default=2, required=False,
                         help="Number of output sentences to group at a time")
+    parser.add_argument('--lang_dict', type=str, required=True,
+                        help="JSON dict with pairs language-id")
 
     # get NameSpace of paramters
     args = parser.parse_args()
@@ -36,77 +39,14 @@ if __name__ == "__main__":
     assert os.path.isdir(args.input_corpora_folder), f"{args.input_corpora_folder} is not a folder"
     assert os.path.isdir(args.input_alignments_folder), f"{args.input_alignments_folder} is not a folder"
     assert not os.path.isfile(args.output_file) or args.force_overwrite, f"{args.output_file} exists but it cannot be overwritten. Use -f option"
-
+    assert os.path.isfile(args.lang_dict), f"{args.lang_dict} does not exist"
     assert args.output_size <= args.consider, f"Cannot create output sequences of sentence of length " \
         "{args.output_size} if considering sequences of length {args.consider}"
 
-    '''
     res = dict()
     errors = 0
-
-    for i, alignment_file in enumerate(os.listdir(args.input_alignments_folder)):
-        if not alignment_file.startswith("."):
-            filepath = os.path.join(args.input_alignments_folder, alignment_file)
-            print(f"Working on alignment file {alignment_file} in position {filepath}")
-            mapping = utils.parse_alignment(filepath)
-            """ mapping has form
-            {
-                "en/en-sv.bicleaner07.0009.xml": {
-                    "sv/en-sv.bicleaner07.0009.xml": [
-                        ([14], [10, 11])
-                    ],
-                    ...
-                },
-                ...
-            }
-            """
-            # open from file
-            for k_1, v_1 in mapping.items():
-                from_filepath = os.path.join(args.input_corpora_folder, k_1)
-                f_1 = utils.parse_corpora(from_filepath)
-                """
-                {
-                    45: "sentence",
-                }
-                """
-                for k_2, v_2 in v_1.items():
-                    print(f"\tWorking on corpuses {k_1} and {k_2}")
-                    dest_filepath = os.path.join(args.input_corpora_folder, k_2)
-                    f_2 = utils.parse_corpora(dest_filepath)
-                    """
-                    {
-                        51: "sentence",
-                    }
-                    """
-                    for a, b in v_2:
-                        try:
-                            sentence_a = " ".join([f_1[x] for x in a])
-                            sentence_b = " ".join([f_2[x] for x in b])
-                        except:
-                            errors += 1
-
-                        if sentence_a in res:
-                            res[sentence_a].append(sentence_b)
-                        elif i <= (LANG_NUMBER - args.consider):
-                            res[sentence_a] = [sentence_b]
-                        else:
-                            pass
-
-        # clean from files entries that did not have all matches
-        keys_to_delete = [k for k, v in res.items() if len(v) <= i - (LANG_NUMBER - args.consider)]
-        for k in keys_to_delete:
-            del res[k]
-
-        print(f"Done alignment, actual size: {len(res)}")
-
-    print(f"Total errors {errors}")
-    print("Writing results to file")
-    '''
-   
-    ################################################################################
-
-    res = dict()
-    errors = 0
+    with open(args.lang_dict, "r") as f:
+        lang_dict = json.loads(f.read())
 
     for i, alignment_file in enumerate(os.listdir(args.input_alignments_folder)):
         if not alignment_file.startswith("."):
@@ -191,7 +131,7 @@ if __name__ == "__main__":
                 choices = random.sample(choices, k=args.output_size)
 
             for sentence, lang in choices:
-                csv_writer.writerow([_id, lang, sentence])
+                csv_writer.writerow([_id, lang_dict[lang], sentence])
             _id += 1
 
     print("Done!")
