@@ -7,7 +7,7 @@ import random
 import tqdm
 import json
 
-LANG_NUMBER = 24
+LANG_NUMBER = 23
 
 if __name__ == "__main__":
 
@@ -131,7 +131,7 @@ if __name__ == "__main__":
                 choices = random.sample(choices, k=args.output_size)
 
             for sentence, lang in choices:
-                csv_writer.writerow([_id, lang_dict[lang], sentence])
+                csv_writer.writerow([_id, lang_dict[lang]["id"], sentence])
             _id += 1
 
     print("Done!")
